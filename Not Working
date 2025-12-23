@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pro-Trader Terminal</title>
+    <!-- Dependencies -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    
+    <style>
+        /* Blogger Reset: Ensures the blog theme doesn't override our black/green look */
+        #pricing-terminal-container {
+            all: initial; /* Resets inherited blog styles */
+            display: block;
+            background-color: #000000 !important;
+            color: #ffffff !important;
+            font-family: 'Inter', sans-serif;
+            padding: 20px;
+            min-height: 600px;
+            position: relative; /* Ensures it respects z-index logic */
+            z-index: 1; /* Keeps it below sticky/fixed navigation menus */
+            margin-top: 20px; /* Provides clearance from the top menu */
+        }
+
+        #pricing-terminal-container * {
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        #pricing-terminal-container .card { 
+            background-color: #0a0a0a !important; 
+            border: 1px solid #1a1a1a !important; 
+            border-radius: 4px; 
+            padding: 1.25rem;
+        }
+
+        #pricing-terminal-container .metric-value { 
+            font-family: 'JetBrains Mono', monospace !important; 
+            font-size: 1.75rem; 
+            color: #00ff41 !important; 
+            font-weight: 500;
+            margin: 0;
+        }
+
+        #pricing-terminal-container label { 
+            display: block; 
+            font-size: 0.7rem; 
+            color: #a0a0a0 !important; 
+            margin-bottom: 6px; 
+            text-transform: uppercase; 
+            letter-spacing: 0.1em; 
+            font-weight: 600;
+        }
+
+        #pricing-terminal-container input[type="number"] {
+            background-color: #111 !important;
+            border: 1px solid #333 !important;
+            color: white !important;
+            padding: 8px;
+            font-size: 0.9rem;
+            width: 100%;
+            border-radius: 2px;
+            outline: none;
+        }
+
+        #pricing-terminal-container input[type="range"] { 
+            appearance: none;
+            width: 100%; 
+            background: #222;
+            height: 4px;
+            border-radius: 2px;
+            margin: 10px 0;
+        }
+
+        #pricing-terminal-container input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 12px;
+            height: 12px;
+            background: #00ff41;
+            cursor: pointer;
+            border-radius: 50%;
+        }
+
+        #pricing-terminal-container .status-badge {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border: 1px solid #00ff41;
+            color: #00ff41;
+            text-transform: uppercase;
+        }
+
+        /* Utility classes specifically for inside the container */
+        .term-grid { display: grid; gap: 1rem; }
+        .term-flex { display: flex; justify-content: space-between; align-items: center; }
+        @media (min-width: 1024px) {
+            .term-main-layout { grid-template-columns: 1fr 3fr; }
+        }
+    </style>
+</head>
+<body>
+
+<div id="pricing-terminal-container">
+    <div class="max-w-6xl mx-auto">
+        <!-- Header -->
+        <div class="term-flex mb-10 border-b border-zinc-900 pb-6">
+            <div>
+                <h1 class="text-xl font-light tracking-tighter text-white uppercase" style="margin:0;">Terminal // <span class="font-bold">Front-Office v1.0</span></h1>
+                <p class="text-zinc-500 text-xs tracking-widest uppercase mt-1" style="margin:0;">Real-time Derivative Pricing & Risk</p>
+            </div>
+            <div class="flex items-center gap-4">
+                <span class="status-badge">System Active</span>
+            </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-4 gap-4">
+            <!-- Parameters Panel -->
+            <div class="lg:col-span-1 space-y-4">
+                <div class="card space-y-6">
+                    <h2 class="text-[10px] font-bold text-zinc-600 tracking-widest uppercase" style="margin:0 0 15px 0;">Inputs</h2>
+                    
+                    <div class="input-group">
+                        <label>Spot Price ($)</label>
+                        <input type="number" id="spotInput" value="150">
+                        <input type="range" id="spotSlider" min="50" max="300" value="150">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Strike Price ($)</label>
+                        <input type="number" id="strikeInput" value="155">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Implied Volatility: <span id="volVal" style="color:white;">25</span>%</label>
+                        <input type="range" id="volSlider" min="5" max="100" value="25">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Time to Expiry: <span id="daysVal" style="color:white;">30</span> Days</label>
+                        <input type="range" id="daysSlider" min="1" max="365" value="30">
+                    </div>
+
+                    <div class="input-group">
+                        <label>Rate: <span id="rateVal" style="color:white;">4.5</span>%</label>
+                        <input type="range" id="rateSlider" min="0" max="10" step="0.1" value="4.5">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Execution Panel -->
+            <div class="lg:col-span-3 space-y-4">
+                <!-- Metrics Grid -->
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="card">
+                        <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-2">Market Price</p>
+                        <p id="priceMetric" class="metric-value">$0.00</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-2">Delta</p>
+                        <p id="deltaMetric" class="metric-value" style="color:white !important;">0.000</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-2">Vega (1%)</p>
+                        <p id="vegaMetric" class="metric-value" style="color:white !important;">0.000</p>
+                    </div>
+                    <div class="card">
+                        <p class="text-[10px] text-zinc-500 uppercase tracking-widest font-bold mb-2">Theta (1d)</p>
+                        <p id="thetaMetric" class="metric-value" style="color:white !important;">0.000</p>
+                    </div>
+                </div>
+
+                <!-- Analysis Panel -->
+                <div class="card">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-[10px] font-bold text-zinc-600 tracking-widest uppercase" style="margin:0;">Profit & Loss Sensitivity</h3>
+                        <div class="text-[10px] text-zinc-500 uppercase">+/- 20% Range</div>
+                    </div>
+                    <div style="height: 320px; position: relative;">
+                        <canvas id="pnlChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Footer Log -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="card">
+                        <h4 class="text-[10px] font-bold text-white tracking-widest uppercase mb-3" style="margin-top:0;">Trader Notes</h4>
+                        <p class="text-zinc-500 text-[11px] leading-relaxed">
+                            Monitor <span style="color:white;">Delta</span> for hedging. BSM model utilized.
+                        </p>
+                    </div>
+                    <div class="card" style="border-left: 2px solid #00ff41 !important;">
+                        <h4 class="text-[10px] font-bold text-white tracking-widest uppercase mb-3" style="margin-top:0;">Model Status</h4>
+                        <p class="text-zinc-500 text-[11px] leading-relaxed">
+                            Continuous compounding enabled. Benchmark: SOFR.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        function normalCDF(x) {
+            const t = 1 / (1 + 0.2316419 * Math.abs(x));
+            const d = 0.3989423 * Math.exp(-x * x / 2);
+            const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+            return x > 0 ? 1 - p : p;
+        }
+
+        let pnlChart;
+        function updateChart(currentS, K, T, r, vol, currentPrice) {
+            const labels = [];
+            const data = [];
+            const start = currentS * 0.8;
+            const end = currentS * 1.2;
+
+            for (let s = start; s <= end; s += (end - start) / 15) {
+                const d1 = (Math.log(s / K) + (r + 0.5 * vol * vol) * T) / (vol * Math.sqrt(T));
+                const d2 = d1 - vol * Math.sqrt(T);
+                const p = s * normalCDF(d1) - K * Math.exp(-r * T) * normalCDF(d2);
+                labels.push(s.toFixed(0));
+                data.push(p - currentPrice);
+            }
+
+            if (pnlChart) pnlChart.destroy();
+            const ctx = document.getElementById('pnlChart').getContext('2d');
+            pnlChart = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'P&L',
+                        data: data,
+                        borderColor: '#00ff41',
+                        borderWidth: 1.5,
+                        pointRadius: 0,
+                        backgroundColor: 'rgba(0, 255, 65, 0.05)',
+                        fill: true,
+                        tension: 0.1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: { 
+                            grid: { color: '#222' }, 
+                            ticks: { color: '#555', font: { size: 9, family: 'JetBrains Mono' } } 
+                        },
+                        x: { 
+                            grid: { display: false }, 
+                            ticks: { color: '#555', font: { size: 9, family: 'JetBrains Mono' } } 
+                        }
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function calculateBS() {
+            const S = parseFloat(document.getElementById('spotInput').value);
+            const K = parseFloat(document.getElementById('strikeInput').value);
+            const vol = parseFloat(document.getElementById('volSlider').value) / 100;
+            const r = parseFloat(document.getElementById('rateSlider').value) / 100;
+            const T = parseFloat(document.getElementById('daysSlider').value) / 365;
+
+            const d1 = (Math.log(S / K) + (r + 0.5 * vol * vol) * T) / (vol * Math.sqrt(T));
+            const d2 = d1 - vol * Math.sqrt(T);
+
+            const price = S * normalCDF(d1) - K * Math.exp(-r * T) * normalCDF(d2);
+            const delta = normalCDF(d1);
+            const vega = (S * Math.sqrt(T) * Math.exp(-d1 * d1 / 2) * 0.3989423) / 100;
+            const theta = (-(S * vol * 0.3989423 * Math.exp(-d1 * d1 / 2)) / (2 * Math.sqrt(T)) - r * K * Math.exp(-r * T) * normalCDF(d2)) / 365;
+
+            document.getElementById('priceMetric').innerText = `$${price.toFixed(2)}`;
+            document.getElementById('deltaMetric').innerText = delta.toFixed(3);
+            document.getElementById('vegaMetric').innerText = `${vega.toFixed(3)}`;
+            document.getElementById('thetaMetric').innerText = `${theta.toFixed(3)}`;
+
+            updateChart(S, K, T, r, vol, price);
+        }
+
+        const inputs = ['spotSlider', 'volSlider', 'daysSlider', 'rateSlider', 'spotInput', 'strikeInput'];
+        inputs.forEach(id => {
+            document.getElementById(id).addEventListener('input', (e) => {
+                if (id === 'spotSlider') document.getElementById('spotInput').value = e.target.value;
+                if (id === 'spotInput') document.getElementById('spotSlider').value = e.target.value;
+                document.getElementById('volVal').innerText = document.getElementById('volSlider').value;
+                document.getElementById('daysVal').innerText = document.getElementById('daysSlider').value;
+                document.getElementById('rateVal').innerText = document.getElementById('rateSlider').value;
+                calculateBS();
+            });
+        });
+
+        calculateBS();
+    })();
+</script>
+</body>
+</html>
